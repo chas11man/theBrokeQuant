@@ -4,25 +4,25 @@
 import os
 import urllib
 import sys
-
-
+from datetime import date
 
 StartDay = 1
 StartMonth = 'January'
-StartYear = 2005
+StartYear = 2010
 
-EndDay = 7
-EndMonth = 'June'
-EndYear = 2013
+today = date.today()
+EndDay = today.day
+EndMonth = today.strftime('%B')
+EndYear = today.year
 
 TimeInterval = "Day"
 
 adjustPrices = True
 
-fromFile = False
+fromFile = True
 fileName = 'SP500.txt'
 
-isUsersTickers = True
+isUsersTickers = False
 usersTickerList = ['SPY']
 
 
@@ -45,7 +45,7 @@ def importData(StartDay, StartMonth, StartYear, EndDay, EndMonth, EndYear, Ticke
     OutputList.append(beginmonth)
     OutputList.append(endmonth)
 
-    #construct the URL 
+    #construct the URL
     URL = "http://ichart.finance.yahoo.com/table.csv?s=" + Ticker + "&a=" + str(OutputList[0]) + "&b=" + str(StartDay) + "&c=" + str(StartYear) + "&d=" + str(OutputList[1]) + "&e=" + str(EndDay) + "&f=" + str(EndYear)+ "&g=" + TimeInterval[0] + "&ignore=.txt"
     f = urllib.urlopen(URL)
     #save to a temp file
@@ -58,10 +58,10 @@ def importData(StartDay, StartMonth, StartYear, EndDay, EndMonth, EndYear, Ticke
     for filerow in range (0, len(FileList)):
         L.append(str(FileList[filerow]).split(","))
     File.close()
-    
+
     #delete temp file
     os.remove('temp.txt')
-    
+
     return L
 
 #write the list to a tab seperated file
@@ -69,7 +69,7 @@ def listToTabSeperatedFile(L, filename):
     f = open(filename, "w+")
     for entry in L:
         string = ""
-    
+
         i = 0
         while i < len(entry):
             if i == 0:
@@ -90,7 +90,7 @@ if fromFile:
     f= open(fileName,"r")
     lines = f.readline()
     while lines:
-        tickerList.append((lines.split('\n'))[0])
+        tickerList.append(lines.rstrip())
         lines = f.readline()
     f.close()
 if isUsersTickers:
@@ -123,7 +123,7 @@ for Ticker in tickerList:
 
 
         #save data to file Ticker.txt in the folder Tickers asa tab seperated file
-        filename = "Tickers\\" + Ticker + ".txt"
+        filename = "Tickers/" + Ticker + ".txt"
         listToTabSeperatedFile(L, filename)
         print Ticker
     except:
@@ -132,4 +132,4 @@ for Ticker in tickerList:
 
 
 
-    
+

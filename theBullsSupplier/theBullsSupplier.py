@@ -65,25 +65,25 @@ shortMA = 50
 
 def buySignal(histData):
 
-    lowoverLongMA = histData[0]['Low'] > sMA(histData[1:], longMA)  
-    lowoverShortMA = histData[0]['Low'] > sMA(histData[1:], shortMA)    
+    lowoverLongMA = histData[0]['Low'] > sMA(histData[1:], longMA)
+    lowoverShortMA = histData[0]['Low'] > sMA(histData[1:], shortMA)
     newLow = histData[0]['Low'] < histLow(histData[1:], highlowPeriods)
 
     buyPrice = histLow(histData[1:], highlowPeriods)
     if buyPrice > histData[0]['Open']:
         buyPrice = histData[0]['Open']
-    
+
     if lowoverShortMA and lowoverLongMA and newLow:
         return buyPrice
     else:
         return False
 
- 
+
 def sellSignal(histData, daysHolding = sys.maxint, maxHoldPeriod = sys.maxint):
 
     #price crosses ma
     if histData[0]['Low'] < sMA(histData[1:], shortMA):
-        
+
         if histData[0]['Open'] < sMA(histData[1:], shortMA):
             return histData[0]['Open']
         else:
@@ -91,12 +91,12 @@ def sellSignal(histData, daysHolding = sys.maxint, maxHoldPeriod = sys.maxint):
 
     #new high
     if histHigh(histData[1:], highlowPeriods) < histData[0]['High']:
-        
+
         if histHigh(histData[1:], highlowPeriods) < histData[0]['Open']:
             return histData[0]['Open']
         else:
             return round(histHigh(histData[1:], highlowPeriods), 2)
-        
+
     if daysHolding == maxHoldPeriod:
         return histData[0]['Close']
     return False
@@ -126,33 +126,33 @@ def portfolio(trade, bank, flatRate):
     bank = bank + (purchaseQuant * sellPrice)
     #Subtract comission
     bank = bank - flatRate
-    
+
     return bank
 
 def importData(ticker, beginDate, endDate, trailingPeriods):
     beginDayFound = False
     endDayFound = False
     dataList = []
-    
-    f = open("Tickers\\" + ticker + ".txt", "r")
+
+    f = open("Tickers/" + ticker + ".txt", "r")
 
     #Skip header line
     line = f.readline().split()
     line = f.readline().split()
 
     while line:
-        
+
         #Start collecting on end date
         if int(line[0][:4]+line[0][5:7]+line[0][8:11]) <= int(endDate[:4]+endDate[5:7]+endDate[8:11]):
             endDayFound = True
-            
+
             #If begin date found collect trailing period data
             if int(line[0][:4]+line[0][5:7]+line[0][8:11]) < int(beginDate[:4]+beginDate[5:7]+beginDate[8:11]):
                 beginDayFound = True
-                
+
                 i = 0
                 while i < trailingPeriods:
-  
+
                     #If there is not enough data to support trailing periods return nothing
                     try:
                         tempDict= {}
@@ -164,14 +164,14 @@ def importData(ticker, beginDate, endDate, trailingPeriods):
                         tempDict.update({'Volume':float(line[5])})
                         tempDict.update({'AdjClose':float(line[6])})
                         dataList.append(tempDict)
-                        
+
                     except IndexError:
                         beginDayFound = False
-                        
+
                     line = f.readline().split()
                     i = i + 1
                 break
-            
+
             #If end date found and begin date not found collect data
             else:
                 tempDict= {}
@@ -183,10 +183,10 @@ def importData(ticker, beginDate, endDate, trailingPeriods):
                 tempDict.update({'Volume':float(line[5])})
                 tempDict.update({'AdjClose':float(line[6])})
                 dataList.append(tempDict)
-                
+
         line = f.readline().split()
 
-        
+
     if beginDayFound and endDayFound:
         return dataList
     else:
@@ -195,7 +195,7 @@ def importData(ticker, beginDate, endDate, trailingPeriods):
 #Returns a simple moving average
 def sMA(historicalData, periods):
     numerator = 0
-    
+
     for entry in historicalData[:periods]:
         numerator = numerator + entry['Close']
 
@@ -204,7 +204,7 @@ def sMA(historicalData, periods):
 #Returns the historical low
 def histLow(historicalData, periods):
     low = sys.maxint
-    
+
     for entry in historicalData[:periods]:
         if entry['Low'] < low:
             low = entry['Low']
@@ -214,7 +214,7 @@ def histLow(historicalData, periods):
 #Returns the historical high
 def histHigh(historicalData, periods):
     high = 0
-    
+
     for entry in historicalData[:periods]:
         if entry['High'] > high:
             high = entry['High']
@@ -240,7 +240,7 @@ def collectTrades(ticker, historicalData, beginDate):
     #Cycle through days
     i = beginDateIndex
     while i >= 0:
-        
+
         #Check for buy signal
         buyPrice = buySignal(historicalData[i:])
         staticMHP = maxHoldPeriod
@@ -252,7 +252,7 @@ def collectTrades(ticker, historicalData, beginDate):
             staticMHP = random.randint(1,maxHoldPeriod)
 
         buyDate = historicalData[i]['Date']
-        
+
         #if buy signal triggered
         if buyPrice:
 
@@ -260,32 +260,32 @@ def collectTrades(ticker, historicalData, beginDate):
             if i == 0:
                 tradesList.append([ticker, buyDate, buyPrice, historicalData[i]['Date'], historicalData[i]['Close'], round(historicalData[i]['Close']/buyPrice, 3), 0])
                 break
-            
+
             #oherwise move to next day and cycle through days until sell signal
             #is triggered
             else:
                 j = i - 1
                 while j >= 0:
-                    
+
                     #check for sell signal
                     sellPrice = sellSignal(historicalData[j:], i - j, staticMHP)
                     sellDate = historicalData[j]['Date']
-                    
+
                     #if sell signal triggered
                     if sellPrice:
                         tradesList.append([ticker, buyDate, buyPrice, sellDate, sellPrice, round(sellPrice/buyPrice, 3), i - j])
                         break
-                    
+
                     #if this position is still open on the last day of analysis
                     #return that days close
                     if not(sellPrice) and j == 0:
                         sellPrice = historicalData[j]['Close']
                         tradesList.append([ticker, buyDate, buyPrice, sellDate, sellPrice, round(sellPrice/buyPrice, 3), i - j])
                         break
-                    
+
                     #calculate next sell signal
                     j = j - 1
-                
+
         #calculate next buy signal
         i = i - 1
 
@@ -361,7 +361,7 @@ def partition(L, first, last, sortColumn):
 
         # If L[current] is smaller than the pivot, it needs to move into the first block,
         # to the left of the pivot.
-        if currentDate < pDate: 
+        if currentDate < pDate:
             swap(L, current, p+1)
             swap(L, p, p+1)
             p = p + 1
@@ -375,13 +375,13 @@ def partitionInts(L, first, last, sortColumn):
 
     # We process the rest of the elements, one-by-one, in left-to-right order
     for current in range(p+1, last+1):
-        
+
         # If L[current] is smaller than the pivot, it needs to move into the first block,
         # to the left of the pivot.
         currentInt = L[current][sortColumn]
         pInt = L[p][sortColumn]
 
-        if currentInt < pInt: 
+        if currentInt < pInt:
             swap(L, current, p+1)
             swap(L, p, p+1)
             p = p + 1
@@ -396,7 +396,7 @@ def generalQuickSort(L, first, last, sortColumn):
 
     # Recursive case: if there are 2 or more elements in the slice L[first:last+1]
     if first < last:
-        # Divide step: partition returns an index p such that 
+        # Divide step: partition returns an index p such that
         # first <= p <= last and everthing in L[first:p] is <= L[p]
         # and everything in L[p+1:last+1] is >= L[p]
         p = partition(L, first, last,sortColumn)
@@ -416,7 +416,7 @@ def generalQuickSortInts(L, first, last, sortColumn):
 
     # Recursive case: if there are 2 or more elements in the slice L[first:last+1]
     if first < last:
-        # Divide step: partition returns an index p such that 
+        # Divide step: partition returns an index p such that
         # first <= p <= last and everthing in L[first:p] is <= L[p]
         # and everything in L[p+1:last+1] is >= L[p]
         p = partitionInts(L, first, last,sortColumn)
@@ -428,8 +428,8 @@ def generalQuickSortInts(L, first, last, sortColumn):
         # Combine step: there is nothing left to do!
 
     return L
-    
-    
+
+
 #Main quicksort functino for dates
 def quickSort(L, sortColumn):
     return generalQuickSort(L, 0, len(L)-1, sortColumn)
@@ -449,8 +449,8 @@ def mergeQuickSortInts(L, sortColumn):
             if L[i] and L[i][0][sortColumn] < minValue:
                 minValue = L[i][0][sortColumn]
                 minIndex = i
-                
-        #Append to mergedList and delete from bucket   
+
+        #Append to mergedList and delete from bucket
         if minValue != sys.maxint:
             mergedList.append(L[minIndex][0])
             del L[minIndex][0]
@@ -471,7 +471,7 @@ def quickSortInts(L, sortColumn):
         seperatedList.append(generalQuickSortInts(temp, 0, len(temp) - 1, sortColumn))
         del L[:1000]
         i = i + 1
-        
+
     #Add any residual buckets to seperatedList
     if len(L) > 1:
         seperatedList.append(generalQuickSortInts(L, 0, len(L) - 1, sortColumn))
@@ -487,23 +487,23 @@ def createTradeDictionary(L):
 
     for entry in L:
         if tradesOnDate:
-            
+
             #If this trade occurred on the same day as those in 'tradesOnDate'
             #append it to 'tradesOnDate'
             if tradesOnDate[0][1] == entry[1]:
                 tradesOnDate.append(entry)
-                
+
             #Otherwise put the list in the dictionary and append the new trade
             #to 'tradesOnDate'
             else:
                 tradeDict.update({tradesOnDate[0][1]:tradesOnDate})
                 tradesOnDate = []
                 tradesOnDate.append(entry)
-                
+
         #if this is the first trade in L
         else:
             tradesOnDate.append(entry)
-            
+
     #update dictionary with any residual trades
     if tradesOnDate:
         tradeDict.update({tradesOnDate[0][1]:tradesOnDate})
@@ -524,11 +524,11 @@ def createTradeSequence(tradeDict):
     tradeDates = []
     for entry in temp:
         tradeDates.extend(entry)
-        
+
     sellDate = 0
     #cycle through possible trade dates
     for entry in tradeDates:
-        
+
         #make dates ints
         temp = ''
         for char in entry:
@@ -572,14 +572,14 @@ def runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate):
         bank = initialAmount
         for entry in trades:
             bank = portfolio(entry, bank, flatRate)
-            
+
             #collect our x and y value for plotting
             if plot:
                 x.append(entry[3])
                 y.append(bank/initialAmount)
 
         #calculate our trade sequence's return
-        returns = bank/initialAmount 
+        returns = bank/initialAmount
         returnsList.append(returns)
         aveReturns = aveReturns + returns
         i = i + 1
@@ -589,7 +589,7 @@ def runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate):
 
     #average return
     aveReturns = aveReturns/numTrials
-    
+
     winners = 0
     stdev = 0
     maximum = 0
@@ -633,7 +633,7 @@ def runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate):
         while i < len(marketDates):
             dateDictionary.update({marketDates[i]: i + 1})
             i = i + 1
-            
+
         #reformat x
         tempX = []
         for point in x:
@@ -670,7 +670,7 @@ def plotSP500(beginDate, endDate):
             minY = point
         i = i - 1
 
-    
+
     #create x
     i = 1
     while i <= len(y):
@@ -681,7 +681,7 @@ def plotSP500(beginDate, endDate):
     pyplot.plot(x,y, color = 'red', linewidth = 1.5)
 
     return(minY, maxY)
-    
+
 #This function takes in a list of [x,y] values and returns
 #the middle %
 def returnMiddle(pointList, middle):
@@ -733,41 +733,41 @@ def plotMiddle(x,y, middle):
     for entry in combinedXY:
         [x,y] = entry
 
-        #if first entry 
+        #if first entry
         if not(pointList):
             pointList.append([x,y])
             currentPoint = x
         else:
-            
+
             #x matches those in 'pointList' append x to pointList
             if x == currentPoint:
                 pointList.append([x,y])
 
             #otherwise find pointList middle range restart pointList
             else:
-                
+
                 #find midle% of points
                 pointList = quickSortInts(pointList, 1)
                 pointList = returnMiddle(pointList, middle)
-                
+
                 #insert into pointDict
                 pointDict.update({currentPoint: pointList})
-    
+
                 #clear point list and update with new x
                 pointList = []
                 pointList.append([x,y])
                 currentPoint = x
 
-    #repeat for any residual points 
+    #repeat for any residual points
     if pointList:
-        
+
         #insert middle points into dictionary
         pointList = quickSortInts(pointList, 1)
         pointList = returnMiddle(pointList, middle)
-        
+
         #insert into pointDict
         pointDict.update({currentPoint: pointList})
-        
+
 
     #create middle x and y
     middleX = []
@@ -783,7 +783,7 @@ def plotMiddle(x,y, middle):
             if yPoint > maxY:
                 maxY = yPoint
 
-    #draw plot 
+    #draw plot
     pyplot.scatter(middleX,middleY, color = 'blue')
 
     return [minY, maxY]
@@ -810,7 +810,7 @@ def plot(x, y, plotFileName, showPlot, savePlot):
     temp = []
     for point in y:
         temp.append((point - 1) * 100)
-    y = temp  
+    y = temp
 
     #y extremes
     maxY = 0
@@ -824,7 +824,7 @@ def plot(x, y, plotFileName, showPlot, savePlot):
             if entry < minY:
                 minY = entry
         pyplot.scatter(x,y, color = '.80')
-        
+
     #plot SP500
     if plot and plotSP500:
         [smallY, bigY] = plotSP500(beginDate, endDate)
@@ -842,8 +842,8 @@ def plot(x, y, plotFileName, showPlot, savePlot):
             maxY = bigY + 5
 
     #adjust axis scale
-    pyplot.axis([minX, maxX, minY, maxY]) 
-    
+    pyplot.axis([minX, maxX, minY, maxY])
+
     #plot lables
     pyplot.xlabel('Day')
     pyplot.ylabel('Portfolio Value (%)')
@@ -858,7 +858,7 @@ def plot(x, y, plotFileName, showPlot, savePlot):
         pyplot.show()
     elif plot:
         pyplot.close()
-    
+
 #This is where we put everything together
 for entry in dateList:
     start = time.time()
@@ -874,12 +874,12 @@ for entry in dateList:
     testTicker = None
     if plot:
         testTicker = 'GE'
-        
+
     #create a trade dictionary
     tradeDict = createTradeDictionary(List)
     print entry, '\n'
-    
-    #run our backtest 
+
+    #run our backtest
     output = runBacktest(tradeDict, numTrials, plot, testTicker, beginDate, endDate)
     #[aveReturns, stdev, maximum, minimum, winners, losers, percentWinners, x, y] = runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate)
 
@@ -896,8 +896,8 @@ for entry in dateList:
 
     #plot our returns
     if plot:
-        
+
         x = output[7]
         y = output[8]
         plot(x,y, entry[2], showPlot, savePlot)
-            
+
