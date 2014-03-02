@@ -5,6 +5,7 @@ import math
 import numpy
 import matplotlib.pyplot as pyplot
 
+sys.setrecursionlimit(10000)
 
 #MANDATORY PARAMETERS
 
@@ -14,7 +15,8 @@ dateList = [['2007-01-01', '2007-12-31', 'strat2007.png'],
             ['2009-01-01', '2009-12-31', 'strat2009.png'],
             ['2010-01-01', '2010-12-31', 'strat2010.png'],
             ['2011-01-01', '2011-12-31', 'strat2011.png'],
-            ['2012-01-01', '2012-12-31', 'strat2013.png']]
+            ['2012-01-01', '2012-12-31', 'strat2013.png'],
+            ['2013-01-01', '2013-12-31', 'strat2013.png']]
 
 maxHoldPeriod = 10 #Do not have to use must be filled out
 randomizeMHP = False
@@ -895,7 +897,7 @@ for entry in dateList:
     print 'Completed in', end - start, '\n'
 
     #plot our returns
-    if plot:
+    if True:
 
         x = output[7]
         y = output[8]

@@ -8,7 +8,7 @@ from datetime import date
 
 StartDay = 1
 StartMonth = 'January'
-StartYear = 2010
+StartYear = 2005
 
 today = date.today()
 EndDay = today.day
