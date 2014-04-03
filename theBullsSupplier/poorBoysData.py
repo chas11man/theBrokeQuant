@@ -126,8 +126,8 @@ for Ticker in tickerList:
         filename = "Tickers/" + Ticker + ".txt"
         listToTabSeperatedFile(L, filename)
         print Ticker
-    except:
-        print "Unknown error, skipped", Ticker
+    except Exception as e:
+        print Ticker + ': ' + str(e)
 
 
 

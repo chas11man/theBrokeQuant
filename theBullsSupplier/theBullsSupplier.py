@@ -299,17 +299,8 @@ def universalTradeList(beginDate, endDate, fromFile, userDefined, fileName, user
 
     #import tickers from file
     if fromFile:
-        tickerList = []
-        f = open(fileName, "r")
-        ticker = f.readline()
-        while ticker:
-            temp = ''
-            for char in ticker:
-                if char != '\n':
-                    temp = temp + char
-            tickerList.append(temp)
-            ticker = f.readline()
-        f.close()
+        with open(fileName, 'r') as f:
+            tickerList = [line.strip() for line in f]
 
     #user user defined tickers
     if userDefined:
@@ -564,8 +555,7 @@ def runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate):
 
     #run test for numTrials many times
     aveReturns = 0
-    i = 0
-    while i < numTrials:
+    for i in xrange(numTrials):
 
         #create a trade sequence
         trades = createTradeSequence(tradeDict)
@@ -583,14 +573,13 @@ def runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate):
         #calculate our trade sequence's return
         returns = bank/initialAmount
         returnsList.append(returns)
-        aveReturns = aveReturns + returns
-        i = i + 1
+        aveReturns += returns
 
     #calculate our test's average return,sample standard deviation,
     #number of winners, maximum portfolio value, minimum portfolio value
 
     #average return
-    aveReturns = aveReturns/numTrials
+    aveReturn = aveReturns/numTrials
 
     winners = 0
     stdev = 0
@@ -600,14 +589,14 @@ def runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate):
     for entry in returnsList:
         #number of winners
         if entry >= 1:
-            winners = winners + 1
+            winners += 1
         #maximum return
         if entry > maximum:
             maximum = entry
         #minimumreturn
         if entry < minimum:
             minimum = entry
-        stdev = stdev + ((entry - aveReturns)*(entry - aveReturns))
+        stdev +=  (entry - aveReturn)**2
     #standard deviation
     if len(returnsList) > 1:
         stdev = math.sqrt(stdev/(len(returnsList) - 1))
@@ -620,29 +609,27 @@ def runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate):
 
     #if we're plotting we'll have to reformat x
     if plot:
-
         #get the days the market was open
         marketDates = []
-        temp = importData(testTicker, beginDate, endDate, 0)
-        i = len(temp) - 1
-        while i >= 0:
-            marketDates.append(temp[i]['Date'])
-            i = i - 1
+        test_data = importData(testTicker, beginDate, endDate, 0)
+        for day in test_data:
+            marketDates.append(day['Date'])
 
         #put dates in a dictionary with key Date and value x'th trading day of the year
         dateDictionary = {}
-        i = 0
-        while i < len(marketDates):
-            dateDictionary.update({marketDates[i]: i + 1})
-            i = i + 1
+
+        for (i, date) in enumerate(marketDates):
+            dateDictionary.update({date: i + 1})
 
         #reformat x
         tempX = []
         for point in x:
-            tempX.append(dateDictionary[point])
+            if point in dateDictionary:
+                tempX.append(dateDictionary[point])
         x = tempX
 
-    return [aveReturns, stdev, maximum, minimum, winners, losers, percentWinners, x, y]
+    return [aveReturn, stdev, maximum, minimum, winners, losers, percentWinners, x, y]
+
 
 #This function will plot the returns of the SP500, you must have
 #SPY data downloaded.  Function returns the minimum and maximum y values
@@ -883,7 +870,7 @@ for entry in dateList:
 
     #run our backtest
     output = runBacktest(tradeDict, numTrials, plot, testTicker, beginDate, endDate)
-    #[aveReturns, stdev, maximum, minimum, winners, losers, percentWinners, x, y] = runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate)
+    #[aveReturn, stdev, maximum, minimum, winners, losers, percentWinners, x, y] = runBacktest(tradeDict, numTrials, plot, testTicker, startDate, endDate)
 
     #print our data
     print 'Average return', output[0]
